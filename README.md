@@ -3,3 +3,4 @@
 ## TODO
 
 - Update setup to point to `./processmaker` previous setup was inside `./processmaker` root instead of project root.
+- Add LICENSE
