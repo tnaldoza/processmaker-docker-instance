@@ -1,0 +1,78 @@
+services:
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        - PM_VERSION=4.15.11
+    container_name: processmaker_web
+    ports:
+      - "8080:80"
+      - "6001:6001"
+    environment:
+      PM_APP_URL: http://localhost
+      PM_APP_PORT: "8080"
+      SESSION_DOMAIN: localhost
+      SANCTUM_STATEFUL_DOMAINS: localhost:8080,127.0.0.1:8080
+    volumes:
+      # Docker socket for script execution (required)
+      - /var/run/docker.sock:/var/run/docker.sock
+      # Use named volume for storage (Windows-compatible)
+      - pm_storage:/code/pm4/storage
+      # Use named volume for bootstrap cache
+      - pm_bootstrap:/code/pm4/bootstrap/cache
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    networks:
+      - processmaker
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost/api/1.0/status"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
+  mysql:
+    image: mysql:8.0
+    container_name: processmaker_mysql
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: password
+      MYSQL_DATABASE: processmaker
+      MYSQL_USER: pm
+      MYSQL_PASSWORD: pass
+    command: --default-authentication-plugin=mysql_native_password --max-allowed-packet=256M --innodb-buffer-pool-size=512M
+    volumes:
+      - mysql_data:/var/lib/mysql
+    ports:
+      - "3306:3306"
+    networks:
+      - processmaker
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-ppassword"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+  redis:
+    image: redis:alpine
+    container_name: processmaker_redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    networks:
+      - processmaker
+
+networks:
+  processmaker:
+    driver: bridge
+
+volumes:
+  mysql_data:
+  pm_storage:
+  pm_bootstrap:
