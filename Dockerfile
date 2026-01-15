@@ -1,9 +1,12 @@
-# Complete ProcessMaker 4 Dockerfile with PHP 8.1
+# Complete ProcessMaker 4 Dockerfile with PHP 8.3
 FROM ubuntu:24.04
 
 ENV DEBIAN_FRONTEND=noninteractive
 ENV TZ="America/Los_Angeles"
-ARG PM_VERSION=4.15.11
+
+ARG PM_VERSION=4.15.11+patch-c
+ARG NODE_VERSION=22.13.1
+ENV DOCKERVERSION=29.1.4
 
 # Update and install prerequisites
 RUN apt update && apt upgrade -y && \
@@ -12,22 +15,27 @@ RUN apt update && apt upgrade -y && \
 # Add ondrej/php PPA
 RUN add-apt-repository ppa:ondrej/php -y && apt update
 
-# Install PHP 8.1 and all required extensions
+# Install PHP 8.3 and all required extensions
 RUN apt install -y \
-    php8.1 php8.1-cli php8.1-fpm php8.1-mysql php8.1-zip php8.1-gd \
-    php8.1-mbstring php8.1-curl php8.1-xml php8.1-bcmath php8.1-imagick \
-    php8.1-dom php8.1-sqlite3 php8.1-redis php8.1-ldap php8.1-imap \
+    php8.3 php8.3-cli php8.3-fpm php8.3-mysql php8.3-zip php8.3-gd \
+    php8.3-mbstring php8.3-curl php8.3-xml php8.3-bcmath php8.3-imagick \
+    php8.3-dom php8.3-sqlite3 php8.3-redis php8.3-ldap php8.3-imap \
+    php8.3-dev php-pear \
     nginx vim curl unzip wget supervisor cron mysql-client build-essential git
 
-ARG NODE_VERSION=16.18.1
-# Install exact Node.js version required by ProcessMaker 4.3.0
+# Install librdkafka (required for rdkafka PHP extension)
+RUN apt install -y librdkafka-dev && \
+    pecl install rdkafka && \
+    echo "extension=rdkafka.so" > /etc/php/8.3/mods-available/rdkafka.ini && \
+    ln -s /etc/php/8.3/mods-available/rdkafka.ini /etc/php/8.3/cli/conf.d/20-rdkafka.ini && \
+    ln -s /etc/php/8.3/mods-available/rdkafka.ini /etc/php/8.3/fpm/conf.d/20-rdkafka.ini
+
+# Install exact Node.js version required by ProcessMaker
 RUN apt-get update && apt-get install -y curl ca-certificates xz-utils \
     && curl -fsSLO https://nodejs.org/dist/v${NODE_VERSION}/node-v${NODE_VERSION}-linux-x64.tar.xz \
     && tar -xJf node-v${NODE_VERSION}-linux-x64.tar.xz -C /usr/local --strip-components=1 \
     && rm node-v${NODE_VERSION}-linux-x64.tar.xz \
     && node -v \
-    && npm -v \
-    && npm i -g npm@8.19.4 \
     && npm -v
 
 # Install Composer
@@ -41,13 +49,13 @@ RUN curl -fsSLO https://download.docker.com/linux/static/stable/x86_64/docker-${
     rm docker-${DOCKERVERSION}.tgz
 
 # Configure PHP-FPM to run
-RUN sed -i 's/^user\s*=.*/user = www-data/' /etc/php/8.1/fpm/pool.d/www.conf \
-    && sed -i 's/^group\s*=.*/group = www-data/' /etc/php/8.1/fpm/pool.d/www.conf \
-    && sed -i 's/^listen\.owner\s*=.*/listen.owner = www-data/' /etc/php/8.1/fpm/pool.d/www.conf \
-    && sed -i 's/^listen\.group\s*=.*/listen.group = www-data/' /etc/php/8.1/fpm/pool.d/www.conf
+RUN sed -i 's/^user\s*=.*/user = www-data/' /etc/php/8.3/fpm/pool.d/www.conf \
+    && sed -i 's/^group\s*=.*/group = www-data/' /etc/php/8.3/fpm/pool.d/www.conf \
+    && sed -i 's/^listen\.owner\s*=.*/listen.owner = www-data/' /etc/php/8.3/fpm/pool.d/www.conf \
+    && sed -i 's/^listen\.group\s*=.*/listen.group = www-data/' /etc/php/8.3/fpm/pool.d/www.conf
 
-RUN grep -nE '^(user|group)\s*=' /etc/php/8.1/fpm/pool.d/www.conf && \
-    php-fpm8.1 -tt
+RUN grep -nE '^(user|group)\s*=' /etc/php/8.3/fpm/pool.d/www.conf && \
+    php-fpm8.3 -tt
 
 # Setup cron for Laravel scheduler
 RUN echo "* * * * * cd /code/pm4 && php artisan schedule:run >> /dev/null 2>&1" > /etc/cron.d/laravel-cron && \
@@ -57,8 +65,8 @@ RUN echo "* * * * * cd /code/pm4 && php artisan schedule:run >> /dev/null 2>&1" 
 # Copy configuration files
 COPY docker/nginx/nginx.conf /etc/nginx/nginx.conf
 COPY docker/supervisor/services.conf /etc/supervisor/conf.d/services.conf
-COPY docker/php/local.ini /etc/php/8.1/fpm/conf.d/99-local.ini
-COPY docker/php/local.ini /etc/php/8.1/cli/conf.d/99-local.ini
+COPY docker/php/local.ini /etc/php/8.3/fpm/conf.d/99-local.ini
+COPY docker/php/local.ini /etc/php/8.3/cli/conf.d/99-local.ini
 
 # Download and setup ProcessMaker
 WORKDIR /tmp
@@ -66,7 +74,7 @@ RUN wget https://github.com/ProcessMaker/processmaker/archive/refs/tags/v${PM_VE
     unzip v${PM_VERSION}.zip && \
     rm -rf /code/pm4 && \
     mkdir -p /code && \
-    mv processmaker-${PM_VERSION} /code/pm4 && \
+    mv processmaker-$(echo ${PM_VERSION} | tr '+' '-') /code/pm4 && \
     rm v${PM_VERSION}.zip
 
 # Install ProcessMaker dependencies
@@ -82,11 +90,13 @@ COPY docker/laravel-echo-server.json /code/pm4/laravel-echo-server.json
 RUN npm install --unsafe-perm=true
 
 # Build frontend assets (this takes a while)
-RUN npm run dev
+ENV NODE_OPTIONS="--max-old-space-size=2048"
+RUN npm run dev || echo "Asset build failed, will build at startup"
 
 # Copy initialization script and set permissions
 COPY docker/init.sh /code/pm4/init.sh
-RUN chmod +x /code/pm4/init.sh
+# Fix line endings (Windows CRLF -> Unix LF) and make executable
+RUN sed -i 's/\r$//' /code/pm4/init.sh && chmod +x /code/pm4/init.sh
 
 # Create all necessary directories with proper permissions
 # IMPORTANT: Do this AFTER copying init.sh to ensure directories exist before volume mount
@@ -102,7 +112,7 @@ RUN mkdir -p /code/pm4/storage/app/public \
     chmod 666 /code/pm4/storage/logs/laravel.log
 
 # Create a startup wrapper script
-RUN echo '#!/bin/bash\n\
+RUN printf '#!/bin/bash\n\
 set -e\n\
 echo "Starting ProcessMaker 4..."\n\
 # Ensure storage directories still exist after volume mount\n\
@@ -110,6 +120,12 @@ mkdir -p /code/pm4/storage/{app,framework/{cache/data,sessions,views},logs}\n\
 mkdir -p /code/pm4/bootstrap/cache\n\
 # Set permissions\n\
 chmod -R 777 /code/pm4/storage /code/pm4/bootstrap/cache\n\
+# Build assets if they do not exist\n\
+if [ ! -f /code/pm4/public/js/app.js ]; then\n\
+  echo "Building frontend assets (this may take a few minutes)..."\n\
+  export NODE_OPTIONS="--max-old-space-size=4096"\n\
+  cd /code/pm4 && npm run dev\n\
+fi\n\
 # Run initialization\n\
 /code/pm4/init.sh\n\
 # Start supervisor\n\

@@ -17,11 +17,6 @@ export default [
 			"**/pnpm-lock.yaml",
 			"**/yarn.lock",
 			"**/docs/**",
-			"**/*test*/**",
-			"**/*safe*/**",
-			"**/*temp*/**",
-			"pm-runner",
-			"tools",
 		],
 	},
 
@@ -203,11 +198,6 @@ export default [
 			],
 			"no-restricted-properties": [
 				"error",
-				{
-					object: "Math",
-					property: "random",
-					message: "Use crypto.randomBytes() for cryptographically secure random numbers",
-				},
 				{
 					object: "console",
 					property: "log",

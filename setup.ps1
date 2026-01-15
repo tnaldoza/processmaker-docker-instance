@@ -49,7 +49,7 @@ Write-Host "All configuration files found!" -ForegroundColor Green
 # Build Docker containers
 Write-Host ""
 Write-Host "Building Docker containers (this may take several minutes)..." -ForegroundColor Yellow
-docker-compose build --no-cache
+docker-compose build
 if ($LASTEXITCODE -ne 0) {
     Write-Host "ERROR: Docker build failed!" -ForegroundColor Red
     exit 1
@@ -81,7 +81,7 @@ if ($LASTEXITCODE -ne 0) {
     Write-Host ""
     Write-Host "No .env file found. Running ProcessMaker installation..." -ForegroundColor Yellow
     Write-Host "This will take several minutes..." -ForegroundColor Yellow
-    
+
     # Install Composer dependencies
     Write-Host ""
     Write-Host "Installing Composer dependencies..." -ForegroundColor Yellow
@@ -89,7 +89,7 @@ if ($LASTEXITCODE -ne 0) {
     if ($LASTEXITCODE -ne 0) {
         Write-Host "WARNING: Composer install had issues, continuing anyway..." -ForegroundColor Yellow
     }
-    
+
     # Install NPM dependencies
     Write-Host ""
     Write-Host "Installing NPM dependencies..." -ForegroundColor Yellow
@@ -97,7 +97,7 @@ if ($LASTEXITCODE -ne 0) {
     if ($LASTEXITCODE -ne 0) {
         Write-Host "WARNING: NPM install had issues, continuing anyway..." -ForegroundColor Yellow
     }
-    
+
     # Build frontend assets
     Write-Host ""
     Write-Host "Building frontend assets..." -ForegroundColor Yellow
@@ -105,7 +105,7 @@ if ($LASTEXITCODE -ne 0) {
     if ($LASTEXITCODE -ne 0) {
         Write-Host "WARNING: Asset build had issues, continuing anyway..." -ForegroundColor Yellow
     }
-    
+
     # Run ProcessMaker install command
     Write-Host ""
     Write-Host "Running ProcessMaker installation wizard..." -ForegroundColor Yellow
@@ -130,11 +130,11 @@ if ($LASTEXITCODE -ne 0) {
         --data-username=pm `
         --data-password=pass `
         --redis-host=redis
-    
+
     if ($LASTEXITCODE -ne 0) {
         Write-Host "WARNING: ProcessMaker installation had issues, check logs..." -ForegroundColor Yellow
     }
-    
+
     # Add additional environment variables
     Write-Host ""
     Write-Host "Configuring additional settings..." -ForegroundColor Yellow
@@ -142,12 +142,12 @@ if ($LASTEXITCODE -ne 0) {
     docker-compose exec -T web bash -c 'echo "PROCESSMAKER_SCRIPTS_DOCKER_MODE=copying" >> .env'
     docker-compose exec -T web bash -c 'echo "LARAVEL_ECHO_SERVER_AUTH_HOST=http://localhost" >> .env'
     docker-compose exec -T web bash -c 'echo "SESSION_SECURE_COOKIE=false" >> .env'
-    
+
     # Create storage link
     Write-Host ""
     Write-Host "Creating storage link..." -ForegroundColor Yellow
     docker-compose exec -T web php artisan storage:link
-    
+
 } else {
     Write-Host ""
     Write-Host ".env file exists, skipping installation." -ForegroundColor Green
@@ -168,35 +168,35 @@ Write-Host "================================================" -ForegroundColor G
 Write-Host ""
 Write-Host "ProcessMaker 4 is now running!" -ForegroundColor Green
 Write-Host ""
-Write-Host "    Application:     http://localhost:8080" -ForegroundColor Cyan
-Write-Host "        WebSockets:      ws://localhost:6001" -ForegroundColor Cyan
+Write-Host "🌐 Application:     http://localhost:8080" -ForegroundColor Cyan
+Write-Host "🔌 WebSockets:      ws://localhost:6001" -ForegroundColor Cyan
 Write-Host ""
-Write-Host "    Login Credentials:" -ForegroundColor Yellow
-Write-Host "        Email:           admin@processmaker.com"
-Write-Host "        Password:        admin123"
+Write-Host "📧 Login Credentials:" -ForegroundColor Yellow
+Write-Host "   Email:           admin@processmaker.com"
+Write-Host "   Password:        admin123"
 Write-Host ""
-Write-Host "    Database Connection:" -ForegroundColor Yellow
-Write-Host "        Host:            localhost:3306"
-Write-Host "        Database:        processmaker"
-Write-Host "        Username:        pm"
-Write-Host "        Password:        pass"
+Write-Host "🗄️  Database Connection:" -ForegroundColor Yellow
+Write-Host "   Host:            localhost:3306"
+Write-Host "   Database:        processmaker"
+Write-Host "   Username:        pm"
+Write-Host "   Password:        pass"
 Write-Host ""
-Write-Host "    Redis:" -ForegroundColor Yellow
-Write-Host "        Host:            localhost:6379"
+Write-Host "📊 Redis:" -ForegroundColor Yellow
+Write-Host "   Host:            localhost:6379"
 Write-Host ""
-Write-Host "    Useful Commands:" -ForegroundColor Yellow
-Write-Host "        View logs:               docker-compose logs -f web"
-Write-Host "        Access container:        docker-compose exec web bash"
-Write-Host "        Run artisan:             docker-compose exec web php artisan [command]"
-Write-Host "        Rebuild assets:          docker-compose exec web npm run dev"
-Write-Host "        Watch assets:            docker-compose exec web npm run watch"
-Write-Host "        Stop containers:         docker-compose down"
-Write-Host "        Remove everything:       docker-compose down -v"
+Write-Host "⚙️  Useful Commands:" -ForegroundColor Yellow
+Write-Host "   View logs:               docker-compose logs -f web"
+Write-Host "   Access container:        docker-compose exec web bash"
+Write-Host "   Run artisan:             docker-compose exec web php artisan [command]"
+Write-Host "   Rebuild assets:          docker-compose exec web npm run dev"
+Write-Host "   Watch assets:            docker-compose exec web npm run watch"
+Write-Host "   Stop containers:         docker-compose down"
+Write-Host "   Remove everything:       docker-compose down -v"
 Write-Host ""
-Write-Host "    Services Running:" -ForegroundColor Yellow
-Write-Host "    - Nginx (web server)"
-Write-Host "    - PHP-FPM 7.4"
-Write-Host "    - Laravel Horizon (queue worker)"
-Write-Host "    - Laravel Echo Server (websockets)"
-Write-Host "    - Cron (scheduled tasks)"
+Write-Host "🔧 Services Running:" -ForegroundColor Yellow
+Write-Host "   - Nginx (web server)"
+Write-Host "   - PHP-FPM 7.4"
+Write-Host "   - Laravel Horizon (queue worker)"
+Write-Host "   - Laravel Echo Server (websockets)"
+Write-Host "   - Cron (scheduled tasks)"
 Write-Host ""

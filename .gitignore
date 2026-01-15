@@ -1,4 +1,32 @@
-# https://github.com/github/gitignore/blob/main/Node.gitignore
+# Environment
+.env
+.env.*
+
+# Docker volumes
+docker/volumes/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# processmaker submodule
+!processmaker/
+
+**/.eslintrc*
+**/*.npmrc*
+**/*data.json*
+**/*config.json*
+**/*output.json*
+**/*comparison_*.*
+
+# Templates for examples.
+!**/*template*
 
 # Logs
 logs
@@ -68,6 +96,7 @@ web_modules/
 .yarn-integrity
 
 # dotenv environment variable files
+pm-runner/runner.env
 .env
 .env.*
 !.env.example
@@ -142,22 +171,28 @@ vite.config.js.timestamp-*
 vite.config.ts.timestamp-*
 .vite/
 
-# Environment
-.env
-.env.*
-
-# Docker volumes
-docker/volumes/
-
-# IDE
-.vscode/
-.idea/
-*.swp
-*.swo
-
-# OS
+# Docker project generated files to ignore
+#  if you want to ignore files created by your editor/tools,
+#  please consider a global .gitignore https://help.github.com/articles/ignoring-files
+.vagrant*
+bin
+docker/docker
+.*.swp
+a.out
+*.orig
+build_src
+.flymake*
+.idea
 .DS_Store
-Thumbs.db
-
-# processmaker submodule
-!processmaker/
+docs/_build
+docs/_static
+docs/_templates
+.gopath/
+.dotcloud
+*.test
+bundles/
+.hg/
+.git/
+vendor/pkg/
+pyenv
+Vagrantfile

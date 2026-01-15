@@ -1,78 +1,99 @@
 services:
-  web:
-    build:
-      context: .
-      dockerfile: Dockerfile
-      args:
-        - PM_VERSION=4.15.11
-    container_name: processmaker_web
-    ports:
-      - "8080:80"
-      - "6001:6001"
-    environment:
-      PM_APP_URL: http://localhost
-      PM_APP_PORT: "8080"
-      SESSION_DOMAIN: localhost
-      SANCTUM_STATEFUL_DOMAINS: localhost:8080,127.0.0.1:8080
-    volumes:
-      # Docker socket for script execution (required)
-      - /var/run/docker.sock:/var/run/docker.sock
-      # Use named volume for storage (Windows-compatible)
-      - pm_storage:/code/pm4/storage
-      # Use named volume for bootstrap cache
-      - pm_bootstrap:/code/pm4/bootstrap/cache
-    depends_on:
-      mysql:
-        condition: service_healthy
-      redis:
-        condition: service_started
-    networks:
-      - processmaker
-    restart: unless-stopped
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost/api/1.0/status"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 60s
+    web:
+        build:
+            context: .
+            dockerfile: Dockerfile
+            args:
+                PM_VERSION: 4.15.11+patch-c
+        container_name: processmaker_web
+        ports:
+            - "8080:80"
+            - "6001:6001"
+        environment:
+            PM_APP_URL: "http://localhost"
+            PM_APP_PORT: "8080"
+            PM_BROADCASTER_PORT: "6001"
+            PM_ENABLE_EXECUTORS: "1"
+            PM_CLEAR_CACHES_ON_BOOT: "1"
 
-  mysql:
-    image: mysql:8.0
-    container_name: processmaker_mysql
-    restart: always
-    environment:
-      MYSQL_ROOT_PASSWORD: password
-      MYSQL_DATABASE: processmaker
-      MYSQL_USER: pm
-      MYSQL_PASSWORD: pass
-    command: --default-authentication-plugin=mysql_native_password --max-allowed-packet=256M --innodb-buffer-pool-size=512M
-    volumes:
-      - mysql_data:/var/lib/mysql
-    ports:
-      - "3306:3306"
-    networks:
-      - processmaker
-    healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-ppassword"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-      start_period: 30s
+            # Optional: align init.sh with mysql service creds (recommended)
+            PM_DB_HOST: "mysql"
+            PM_DB_PORT: "3306"
+            PM_DB_NAME: "processmaker"
+            PM_DB_USER: "pm"
+            PM_DB_PASS: "pass"
+            PM_REDIS_HOST: "redis"
 
-  redis:
-    image: redis:alpine
-    container_name: processmaker_redis
-    restart: unless-stopped
-    ports:
-      - "6379:6379"
-    networks:
-      - processmaker
+            # Optional: override default dev admin creds
+            # PM_ADMIN_USER: "admin"
+            # PM_ADMIN_PASS: "admin123"
+            # PM_ADMIN_EMAIL: "admin@processmaker.com"
+        volumes:
+            # Docker socket for script execution (Linux/WSL2 only)
+            - /var/run/docker.sock:/var/run/docker.sock
+
+            # Windows-friendly persistence
+            - pm_storage:/code/pm4/storage
+            - pm_bootstrap:/code/pm4/bootstrap/cache
+        depends_on:
+            mysql:
+                condition: service_healthy
+            redis:
+                condition: service_healthy
+
+        networks:
+            - processmaker
+        restart: unless-stopped
+        healthcheck:
+            test: ["CMD", "curl", "-f", "http://localhost/api/1.0/status"]
+            interval: 30s
+            timeout: 10s
+            retries: 3
+            start_period: 60s
+
+    mysql:
+        image: mysql:8.0
+        container_name: processmaker_mysql
+        restart: always
+        environment:
+            MYSQL_ROOT_PASSWORD: "password"
+            MYSQL_DATABASE: "processmaker"
+            MYSQL_USER: "pm"
+            MYSQL_PASSWORD: "pass"
+        command: >
+            --default-authentication-plugin=mysql_native_password
+            --max-allowed-packet=256M
+            --innodb-buffer-pool-size=512M
+        volumes:
+            - mysql_data:/var/lib/mysql
+        networks:
+            - processmaker
+        healthcheck:
+            test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-ppassword"]
+            interval: 10s
+            timeout: 5s
+            retries: 5
+            start_period: 30s
+
+    redis:
+        image: redis:alpine
+        container_name: processmaker_redis
+        restart: unless-stopped
+        networks:
+            - processmaker
+        healthcheck:
+            test: ["CMD", "redis-cli", "ping"]
+            interval: 5s
+            timeout: 3s
+            retries: 30
+            start_period: 5s
+
 
 networks:
-  processmaker:
-    driver: bridge
+    processmaker:
+        driver: bridge
 
 volumes:
-  mysql_data:
-  pm_storage:
-  pm_bootstrap:
+    mysql_data:
+    pm_storage:
+    pm_bootstrap:

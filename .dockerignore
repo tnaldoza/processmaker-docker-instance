@@ -118,6 +118,9 @@ out/
 .turbo/
 *.tsbuildinfo
 
+# Scripts
+scripts/
+
 # Docker
 Dockerfile
 Dockerfile.*
