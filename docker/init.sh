@@ -248,6 +248,10 @@ ensure_env_kv "APP_ENV" "local"
 ensure_env_kv "APP_DEBUG" "true"
 ensure_env_kv "REDIS_HOST" "${PM_REDIS_HOST}"
 ensure_env_kv "REDIS_PORT" "6379"
+ensure_env_kv "LARAVEL_ECHO_SERVER_AUTH_HOST" "${APP_URL_EFFECTIVE}"
+ensure_env_kv "SESSION_SECURE_COOKIE" "false"
+ensure_env_kv "FORCE_HTTPS" "false"
+ensure_env_kv "CACHE_DRIVER" "redis"
 
 if [ "${PM_CLEAR_CACHES_ON_BOOT:-0}" = "1" ]; then
 	echo "PM_CLEAR_CACHES_ON_BOOT=1 -> clearing caches..."

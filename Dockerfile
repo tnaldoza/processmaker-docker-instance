@@ -90,8 +90,8 @@ COPY docker/laravel-echo-server.json /code/pm4/laravel-echo-server.json
 RUN npm install --unsafe-perm=true
 
 # Build frontend assets (this takes a while)
-ENV NODE_OPTIONS="--max-old-space-size=2048"
-RUN npm run dev || echo "Asset build failed, will build at startup"
+ENV NODE_OPTIONS="--max-old-space-size=4096"
+RUN npm run dev
 
 # Copy initialization script and set permissions
 COPY docker/init.sh /code/pm4/init.sh
